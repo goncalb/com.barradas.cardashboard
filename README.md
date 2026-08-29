@@ -12,7 +12,7 @@ decides what your car may see and do, and answers its questions.
 | Test channel    | [HOMEY_TEST_URL]         |
 | Community topic | [COMMUNITY_TOPIC_URL]    |
 
-![Settings]([IMG] docs/settings.png)
+![Settings]([docs/settings.png)
 
 ## What it does
 
