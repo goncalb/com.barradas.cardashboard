@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <!-- house -->
+  <path d="M50 12 L88 44 L80 44 L80 84 L20 84 L20 44 L12 44 Z"
+        fill="none" stroke="#000" stroke-width="6" stroke-linejoin="round"/>
+  <!-- car inside -->
+  <path d="M32 66 L36 56 Q37 53 40 53 L60 53 Q63 53 64 56 L68 66 L68 72 L62 72 L62 69 L38 69 L38 72 L32 72 Z"
+        fill="#000"/>
+  <circle cx="41" cy="70" r="4" fill="#000"/>
+  <circle cx="59" cy="70" r="4" fill="#000"/>
+</svg>

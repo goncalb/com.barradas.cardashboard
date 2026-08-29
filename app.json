@@ -1,0 +1,90 @@
+{
+  "id": "com.barradas.cardashboard",
+  "version": "1.4.12",
+  "compatibility": ">=8.1.0",
+  "sdk": 3,
+  "platforms": [
+    "local"
+  ],
+  "name": {
+    "en": "Car Dashboard"
+  },
+  "description": {
+    "en": "Configure a simple, safe dashboard for your car's display (Android Automotive)."
+  },
+  "category": [
+    "tools"
+  ],
+  "permissions": [
+    "homey:manager:api",
+    "homey:manager:geolocation"
+  ],
+  "author": {
+    "name": "Gonçalo Barradas",
+    "email": "REPLACE@EMAIL"
+  },
+  "brandColor": "#16222C",
+  "api": {
+    "getDashboard": {
+      "method": "GET",
+      "path": "/dashboard",
+      "public": true
+    },
+    "getState": {
+      "method": "GET",
+      "path": "/state",
+      "public": true
+    },
+    "postAction": {
+      "method": "POST",
+      "path": "/action",
+      "public": true
+    },
+    "postPair": {
+      "method": "POST",
+      "path": "/pair",
+      "public": true
+    },
+    "getDevices": {
+      "method": "GET",
+      "path": "/devices"
+    },
+    "getFlows": {
+      "method": "GET",
+      "path": "/flows"
+    },
+    "getPairing": {
+      "method": "GET",
+      "path": "/pairing"
+    },
+    "postPairing": {
+      "method": "POST",
+      "path": "/pairing"
+    },
+    "postUnpair": {
+      "method": "POST",
+      "path": "/unpair",
+      "public": true
+    },
+    "getZones": {
+      "method": "GET",
+      "path": "/zones"
+    },
+    "postZoneOrder": {
+      "method": "POST",
+      "path": "/zone-order"
+    },
+    "postCarMeta": {
+      "method": "POST",
+      "path": "/car-meta",
+      "public": true
+    }
+  },
+  "images": {
+    "small": "/assets/images/small.png",
+    "large": "/assets/images/large.png",
+    "xlarge": "/assets/images/xlarge.png"
+  },
+  "support": "https://community.homey.app/t/REPLACE-TOPIC-ID",
+  "homeyCommunityTopicId": 0
+}

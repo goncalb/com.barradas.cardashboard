@@ -1,0 +1,573 @@
+<!DOCTYPE html>
+<!--
+  Car Dashboard for Homey Pro
+  Copyright (C) 2026 Gonçalo Barradas
+  Licensed under the GNU GPL v3.0 or later; see the LICENSE file.
+-->
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <script type="text/javascript" src="/homey.js" data-origin="settings"></script>
+  <style>
+    body { font-family: -apple-system, Roboto, sans-serif; margin: 0; padding: 14px; color: #222; background: #f4f6f8; }
+    h2 { font-size: 15px; margin: 18px 0 8px; }
+    .hint { font-size: 12px; color: #777; margin: 0 0 10px; line-height: 1.4; }
+    .tile, .item {
+      border: 1px solid #ddd; border-radius: 10px; padding: 10px 12px; margin-bottom: 8px;
+      background: #fff;
+    }
+    .tile-head { display: flex; align-items: center; gap: 10px; }
+    .tile-head .grow { flex: 1; min-width: 0; }
+    .name { font-size: 14px; font-weight: 600; }
+    .meta { font-size: 11px; color: #888; margin-top: 2px; }
+    select, input[type=text] {
+      width: 100%; padding: 7px; border: 1px solid #ccc; border-radius: 8px; font-size: 13px; margin-top: 4px; background:#fff;
+    }
+    button { border: none; border-radius: 8px; padding: 8px 12px; font-size: 13px; cursor: pointer; background: #eee; }
+    button.primary { background: #7fb3d8; color: #0c1218; font-weight: 700; width: 100%; padding: 12px; margin-top: 14px; }
+    button.danger { color: #b33; }
+    button.linkish { background: none; color: #2a6c9b; padding: 2px 4px; font-size: 11px; }
+    .arrows button { padding: 4px 8px; font-size: 12px; }
+    .zone { border: 1px solid #eee; border-radius: 10px; margin-top: 6px; overflow: hidden; }
+    .zone-head {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 7px 10px; background: #f7f9fb; cursor: pointer; font-size: 12px; font-weight: 600; color: #556;
+    }
+    .zone-body { padding: 4px 8px; display: none; }
+    .zone.open .zone-body { display: block; }
+    .zone-body label { display: flex; gap: 8px; align-items: center; font-size: 13px; padding: 5px 4px; }
+    .role { margin-top: 8px; }
+    .role .rname { font-size: 11px; font-weight: 700; color: #556; letter-spacing: .04em; text-transform: uppercase; }
+    .role .rwhy { font-size: 10px; color: #98a2ad; margin-top: 3px; line-height: 1.35; }
+    .heroRow { display: flex; gap: 8px; margin-top: 6px; }
+    .heroOpt { flex: 1; border: 1px solid #d5dae0; border-radius: 8px; padding: 7px 0; text-align: center; font-size: 12px; cursor: pointer; background: #fff; }
+    .heroOpt.on { border-color: #7fb3d8; color: #2a6c9b; font-weight: 700; background: #eef6fc; }
+    .toast { position: fixed; bottom: 14px; left: 14px; right: 14px; background: #222; color: #fff;
+      border-radius: 10px; padding: 12px; font-size: 13px; text-align: center; display: none; z-index: 10; }
+    .warnbox { background: #fdf6e8; border: 1px solid #eeddb5; border-radius: 10px; padding: 10px 12px;
+      font-size: 11px; color: #8a6d2f; line-height: 1.4; margin-bottom: 8px; }
+      .zrow { display:flex; align-items:center; gap:10px; padding:10px 10px;
+      background:#fff; border-bottom:1px solid #f1f2f4; font-size:15px;
+      user-select:none; -webkit-user-select:none; touch-action:pan-y;
+      transition: transform .05s linear; }
+    .zrow:last-child { border-bottom:none; }
+    .zrow .zhandle { color:#c3c8cd; font-size:15px; cursor:grab; padding:0 8px; touch-action:none; }
+    .zrow.dragging { background:#eaf3fb; box-shadow:0 6px 18px rgba(0,0,0,.22);
+      position:relative; z-index:5; transform-origin:center;
+      border-left:3px solid #7fb3d8; transition:none; }
+    .zrow.dragging .zhandle { color:#4a90c2; }
+    #zoneOrder { border:1px solid #eee; border-radius:10px; overflow:hidden; margin-top:6px; }
+      html, body { overscroll-behavior-y: contain; }
+      .drow { display:flex; align-items:center; gap:10px; padding:8px 12px;
+      border-top:1px solid #f1f3f6; font-size:14px; }
+    .drow .dn { flex:1; }
+    .drow .dsub { color:#98a2ac; font-size:11px; margin-top:1px; }
+    .sw { width:40px; height:24px; border-radius:99px; background:#d7dce2; position:relative;
+      flex:none; transition:background .15s; }
+    .sw.on { background:#2f6fce; }
+    .sw::after { content:''; position:absolute; top:2px; left:2px; width:20px; height:20px;
+      border-radius:50%; background:#fff; box-shadow:0 1px 3px rgba(0,0,0,.25); transition:left .15s; }
+    .sw.on::after { left:18px; }
+    .cnt { background:#e8f0fb; color:#2f6fce; border-radius:99px; padding:1px 9px;
+      font-size:11px; font-weight:600; }
+    .geo { margin-top:12px; padding-top:10px; border-top:1px solid #eef1f4; }
+    .geo-row { display:flex; gap:10px; align-items:center; cursor:pointer; }
+    .geo-txt { font-size:13px; color:#3a424c; text-transform:none; letter-spacing:0; display:flex; flex-direction:column; }
+    .geo-sub { font-size:11px; color:#98a2ad; text-transform:none; letter-spacing:0; }
+    .geo-q { font-size:12px; color:#556; margin-top:12px; text-transform:none; letter-spacing:0; }
+    .geo-seg { display:flex; gap:8px; margin-top:6px; }
+    button.segb { background:#fff !important; border:1px solid #dfe4e9 !important; border-radius:999px !important;
+      padding:7px 14px !important; width:auto !important; min-width:0 !important; height:auto !important;
+      font-size:12px !important; color:#5a6570 !important; white-space:nowrap; line-height:1.2 !important;
+      margin:0 !important; box-shadow:none !important; text-transform:none; letter-spacing:0; }
+    button.segb.sel { background:#4076c4 !important; color:#fff !important; border-color:#4076c4 !important; font-weight:700; }
+button.ghost { background:none !important; border:1px solid #e2e6ea !important;
+      border-radius:8px !important; width:32px; min-width:32px; height:32px;
+      padding:0 !important; margin:0 0 0 6px; font-size:14px !important;
+      color:#7a8894 !important; line-height:30px; box-shadow:none !important; }
+    button.ghost.danger { color:#c0616a !important; }
+    button.ghost:active { background:#f2f4f7 !important; }
+      .carcard { background:#fff; border:1px solid #e7eaee; border-radius:14px;
+      padding:14px; margin-bottom:12px; box-shadow:0 4px 16px rgba(30,40,60,.06); }
+    .cartop { display:flex; align-items:center; gap:10px; margin-bottom:10px; }
+    .cartop .car-name { flex:1; min-width:0; font-weight:700; font-size:15px;
+      border:1.5px solid #e7eaee; border-radius:10px; padding:8px 12px; }
+    .pill { border-radius:99px; padding:4px 12px; font-size:12px; font-weight:700;
+      flex:none; white-space:nowrap; }
+    .pon { background:#e2f4ea; color:#2c8a57; }
+    .poff { background:#f0f2f5; color:#8a94a0; }
+    .cargrid { display:grid; grid-template-columns:1fr 1fr; gap:1px; background:#f0f2f5;
+      border:1px solid #f0f2f5; border-radius:10px; overflow:hidden; margin-bottom:12px; }
+    .cell { background:#fff; padding:8px 12px; }
+    .cell.wide { grid-column:1/3; }
+    .ck { font-size:10px; letter-spacing:.06em; text-transform:uppercase;
+      color:#98a2ac; font-weight:600; }
+    .cv { font-size:13px; color:#23292f; margin-top:2px; word-break:break-word; }
+    .carbtns { display:flex; gap:8px; }
+  </style>
+</head>
+<body>
+
+  <h2>Dashboard tiles</h2>
+  <p class="hint">These appear on your car's screen, in this order. The car can only see and control what you add here. Tile types without compatible devices aren't offered.</p>
+<p class="meta" id="configSummary"></p>
+  <div id="tiles"></div>
+
+  <div class="item" id="addRow" style="background:#f7f9fb; display:flex; align-items:center; gap:10px;">
+    <div style="flex:1"><select id="newTileType"></select></div>
+    <button onclick="addTile()">+ Add tile</button>
+  </div>
+
+  <h2>Scenes for the car</h2>
+  <p class="hint">Whitelisted Homey Flows the car can trigger with one tap. Only enable Flows that are safe to run from the road.</p>
+  <div id="scenes"></div>
+
+<h2>Room order (car app)</h2>
+<p class="meta">Drag to arrange — the car's sections follow this order.</p>
+<div id="zoneOrder"></div>
+<h2>Paired cars</h2>
+  <p class="hint">Cars connect with a one-time code — no API key ever leaves your Homey. Generate a code, enter it on the car's pairing screen within 5 minutes.</p>
+  <div id="pairing"></div>
+
+  <button class="primary" onclick="save()">Save dashboard</button>
+  <div class="toast" id="toast"></div>
+
+<script>
+let HomeyRef, devices = [], flows = [];
+let config = { tiles: [], scenes: [] };
+const openZones = new Set();
+
+let pairingPoll = null;
+function onHomeyReady(Homey) {
+  HomeyRef = Homey;
+  Promise.all([
+    new Promise(r => Homey.get('dashboard', (e, v) => r(v))),
+    new Promise(r => Homey.api('GET', '/devices', (e, v) => r(v || []))),
+    new Promise(r => Homey.api('GET', '/flows', (e, v) => r(v || []))),
+  ]).then(([saved, devs, fls]) => {
+    if (saved) config = saved;
+    devices = devs.sort((a, b) => (a.zone + a.name).localeCompare(b.zone + b.name));
+    flows = fls.sort((a, b) => a.name.localeCompare(b.name));
+    render();
+    renderPairing();
+  syncZoneList(() => { renderZoneOrder(); render(); });
+  if (!pairingPoll) pairingPoll = setInterval(() => {
+    const el = document.activeElement;
+    if (el && el.classList && el.classList.contains('car-name')) return;
+    renderPairing();
+  }, 5000);
+    Homey.ready();
+  });
+}
+
+function humanAgo(t) {
+  const m = Math.round((Date.now() - t) / 60000);
+  if (m < 60) return m + ' min ago';
+  const h = Math.round(m / 60);
+  if (h < 48) return h + ' h ago';
+  return Math.round(h / 24) + ' days ago';
+}
+
+function titleCase(n) {
+  if (n !== n.toUpperCase()) return n;
+  return n.toLowerCase().replace(/(^|\s|&)\w/g, c => c.toUpperCase());
+}
+
+setInterval(() => {
+  const a = document.activeElement;
+  if (!(a && a.classList && a.classList.contains('car-name'))) renderPairing();
+}, 30000);
+
+function renderPairing() {
+  HomeyRef.api('GET', '/pairing', (e, v) => {
+    const el = document.getElementById('pairing');
+    if (e || !v) { el.innerHTML = '<p class="hint">Pairing unavailable</p>'; return; }
+    let html = '';
+    if (v.code) {
+      const mins = Math.max(0, Math.round((v.code.expiresAt - Date.now()) / 60000));
+      html += `<div class="item" style="justify-content:center;background:#eef6fc;border-color:#7fb3d8">
+        <div style="text-align:center">
+          ${v.homeyId ? `<div class="meta">Step 1 · Homey ID (first-time setup)</div>
+          <div class="copyable" data-copy="${v.homeyId}"
+               style="font-size:15px;font-weight:600;letter-spacing:.08em;word-break:break-all;user-select:text;-webkit-user-select:text;cursor:pointer">${v.homeyId} ⧉</div>` : ''}
+          <div class="meta" style="margin-top:8px">Step 2 · Pairing code</div>
+          <div class="copyable" data-copy="${v.code.code}"
+               style="font-size:22px;font-weight:700;letter-spacing:.3em;user-select:text;-webkit-user-select:text;cursor:pointer">${v.code.code} ⧉</div>
+          <div class="meta">Expires in ~${mins} min · not case-sensitive</div>
+      <button class="ghost danger" style="width:auto;padding:0 12px" onclick="cancelCode()">Cancel code</button>
+        </div></div>`;
+    }
+    html += `<div class="item"><div class="grow"></div>
+      <button onclick="genCode()">Generate pairing code</button></div>`;
+    (v.cars || []).forEach(c => {
+      const when = new Date(c.createdAt).toLocaleString([], {
+        year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'
+      });
+      const m = c.meta || {};
+      const cell = (k, val) => val ? `<div class="cell"><div class="ck">${k}</div><div class="cv">${esc(val)}</div></div>` : '';
+      const pill = c.lastSeen
+        ? (Date.now() - c.lastSeen < 90000
+          ? '<span class="pill pon">● Online</span>'
+          : `<span class="pill poff">Last seen ${humanAgo(c.lastSeen)}</span>`)
+        : '<span class="pill poff">Not seen yet</span>';
+      html += `<div class="carcard">
+        <div class="cartop">
+          <input class="car-name" data-tail="${c.tail}" value="${esc(c.name)}">
+          ${pill}
+        </div>
+        <div class="cargrid">
+          ${cell('Model', m.model)}
+          ${cell('App', m.appVersion)}
+          ${cell('Android', m.android ? m.android + (m.carApi ? ' · Car API ' + m.carApi : '') : '')}
+          ${cell('Screen', m.screen)}
+          ${cell('Network', m.network)}
+          ${cell('Location', m.location)}
+          ${cell('Last seen', c.lastSeen ? new Date(c.lastSeen).toLocaleString([], {
+            month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : '')}
+          <div class="cell wide"><div class="ck">Paired</div>
+            <div class="cv">${when} · key …${c.tail} · as "${esc(c.deviceName)}"</div></div>
+        </div>
+        <div class="carbtns">
+          <button class="ghost rename-btn" data-tail="${c.tail}" style="width:auto;padding:0 16px">Rename</button>
+          <button class="ghost danger revoke-btn" data-tail="${c.tail}" style="width:auto;padding:0 16px">Revoke</button>
+        </div></div>`;
+    });
+    el.innerHTML = html;
+  });
+}
+function cancelCode() {
+  HomeyRef.api('POST', '/pairing', { cancelCode: true }, () => renderPairing());
+}
+
+function genCode() { HomeyRef.api('POST', '/pairing', { generate: true }, () => renderPairing()); }
+function esc(t) {
+  return String(t == null ? '' : t)
+    .replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;').replaceAll("'", '&#39;');
+}
+function copyText(t, el) {
+  const done = () => {
+    const orig = el.innerHTML;
+    el.innerHTML = orig.replace('⧉', '✓ copied');
+    setTimeout(() => { el.innerHTML = orig; }, 1200);
+  };
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(t).then(done).catch(() => fallbackCopy(t, done));
+  } else fallbackCopy(t, done);
+}
+function fallbackCopy(t, done) {
+  const ta = document.createElement('textarea');
+  ta.value = t; ta.style.position = 'fixed'; ta.style.opacity = '0';
+  document.body.appendChild(ta); ta.select();
+  try { document.execCommand('copy'); done(); } catch (e) { /* selection still works */ }
+  document.body.removeChild(ta);
+}
+let zoneList = [];
+function syncZoneList(cb) {
+  HomeyRef.api('GET', '/zones', null, (err, v) => {
+    if (!err && v) zoneList = v.zones || [];
+    if (cb) cb();
+  });
+}
+function zoneRank(name) {
+  const i = zoneList.indexOf(name);
+  return i === -1 ? 999 : i;
+}
+function renderZoneOrder() {
+  const el = document.getElementById('zoneOrder');
+  if (!el) return;
+  el.innerHTML = zoneList.map(z =>
+    `<div class="zrow" data-zone="${esc(z)}"><span class="zhandle">≡</span><span>${esc(z)}</span></div>`
+  ).join('');
+}
+let drag = null;
+function dragApply(clientY) {
+  if (!drag) return;
+  drag.offset = clientY - drag.startY;
+  drag.row.style.transform = `translateY(${drag.offset}px)`;
+  const h = drag.row.offsetHeight;
+  if (drag.offset > h * 0.6 && drag.row.nextElementSibling) {
+    drag.row.parentNode.insertBefore(drag.row.nextElementSibling, drag.row);
+    drag.startY += h; drag.offset -= h;
+    drag.row.style.transform = `translateY(${drag.offset}px)`;
+  } else if (drag.offset < -h * 0.6 && drag.row.previousElementSibling) {
+    drag.row.parentNode.insertBefore(drag.row, drag.row.previousElementSibling);
+    drag.startY -= h; drag.offset += h;
+    drag.row.style.transform = `translateY(${drag.offset}px)`;
+  }
+}
+function dragScrollLoop() {
+  if (!drag || !drag.scrollDir) return;
+  const step = 3 * drag.scrollDir;
+  window.scrollBy(0, step);
+  drag.startY -= step;
+  dragApply(drag.lastY);
+  requestAnimationFrame(dragScrollLoop);
+}
+document.addEventListener('pointerdown', (ev) => {
+  const handle = ev.target.closest('.zhandle');
+  if (!handle) return;
+  const row = handle.closest('.zrow');
+  drag = { row, startY: ev.clientY, lastY: ev.clientY, offset: 0, scrollDir: 0 };
+  row.classList.add('dragging');
+  handle.setPointerCapture && handle.setPointerCapture(ev.pointerId);
+  ev.preventDefault();
+});
+document.addEventListener('pointermove', (ev) => {
+  if (!drag) return;
+  drag.lastY = ev.clientY;
+  dragApply(ev.clientY);
+  const EDGE = 80;
+  const dir = ev.clientY < EDGE ? -1 : (ev.clientY > window.innerHeight - EDGE ? 1 : 0);
+  if (dir !== drag.scrollDir) {
+    drag.scrollDir = dir;
+    if (dir) requestAnimationFrame(dragScrollLoop);
+  }
+});
+document.addEventListener('touchmove', (ev) => {
+  if (drag) ev.preventDefault();
+}, { passive: false });
+document.addEventListener('pointerup', () => {
+  if (!drag) return;
+  drag.scrollDir = 0;
+  drag.row.style.transform = '';
+  drag.row.classList.remove('dragging');
+  zoneList = [...document.querySelectorAll('#zoneOrder .zrow')].map(r => r.dataset.zone);
+  HomeyRef.api('POST', '/zone-order', { zones: zoneList }, () => render());
+  drag = null;
+});
+document.addEventListener('click', (ev) => {
+  const c = ev.target.closest('.copyable');
+  if (c) { copyText(c.dataset.copy, c); return; }
+  const r = ev.target.closest('.rename-btn');
+  if (r) {
+    const field = document.querySelector(`.car-name[data-tail="${r.dataset.tail}"]`);
+    const name = field ? field.value.trim() : '';
+    r.textContent = '…';
+    HomeyRef.api('POST', '/pairing', { renameTail: r.dataset.tail, name }, () => renderPairing());
+    return;
+  }
+  const d = ev.target.closest('.revoke-btn');
+  if (d) HomeyRef.api('POST', '/pairing', { revokeTail: d.dataset.tail }, () => renderPairing());
+});
+
+const TYPE_FILTER = {
+  garage:      d => d.capabilities.includes('garagedoor_closed'),
+  gate:        d => d.capabilities.includes('garagedoor_closed') || d.capabilities.includes('locked'),
+  lock:        d => d.capabilities.includes('locked'),
+  lights:      d => d.class === 'light' && d.capabilities.includes('onoff'),
+  temperature: d => d.capabilities.includes('measure_temperature'),
+  blinds:      d => d.capabilities.some(c => c.startsWith('windowcoverings_')),
+  contact:     d => d.capabilities.includes('alarm_contact'),
+  energy:      d => d.capabilities.includes('measure_power') || d.capabilities.includes('measure_battery'),
+};
+const ROLE_FILTER = {
+  solar:       d => d.class === 'solarpanel' || (d.class !== 'battery' && d.capabilities.includes('measure_power')),
+  battery:     d => d.capabilities.includes('measure_battery') && d.capabilities.includes('measure_power'),
+  ev:          d => d.class === 'evcharger' || (d.class !== 'battery' && d.capabilities.includes('measure_power')),
+  grid:        d => d.capabilities.includes('measure_power'),
+  consumption: d => d.capabilities.includes('measure_power'),
+};
+const TYPE_LABEL = {
+  garage: 'Garage door', gate: 'Gate', lock: 'Locks', lights: 'Lights', temperature: 'Temperature',
+  blinds: 'Blinds', contact: 'Door/window sensors', energy: 'Energy',
+};
+const ROLE_META = {
+  solar:       { label: '☀ Solar production', why: 'Production is always shown positive.' },
+  battery:     { label: '🔋 Home battery', why: '+ = charging · − = powering the house.' },
+  grid:        { label: '⚡ Grid meter', why: '↓ = importing · ↑ = exporting.' },
+  consumption: { label: '🏠 Home consumption', why: '"Calculate for me" derives it from the other roles.' },
+  ev:          { label: '🔌 EV charger', why: 'Live charging power. Daily total comes from Homey Energy regardless.' },
+};
+
+function refreshAddMenu() {
+  const sel = document.getElementById('newTileType');
+  sel.innerHTML = Object.keys(TYPE_LABEL)
+    .filter(t => devices.some(TYPE_FILTER[t]))
+    .map(t => `<option value="${t}">${TYPE_LABEL[t]}</option>`)
+    .join('');
+  document.getElementById('addRow').style.display = sel.options.length ? 'flex' : 'none';
+}
+
+function addTile() {
+  const type = document.getElementById('newTileType').value;
+  const tile = { id: 'tile_' + Date.now(), type, label: TYPE_LABEL[type] };
+  if (type === 'energy') { tile.roles = { consumption: 'calculated' }; tile.hero = 'consumption'; }
+  else tile.deviceIds = [];
+  config.tiles.push(tile);
+  render();
+}
+
+function render() {
+  const sumEl = document.getElementById('configSummary');
+  if (sumEl && config) {
+    const devs = (config.tiles || []).reduce((n, t) => n + ((t.deviceIds || []).length), 0);
+    sumEl.textContent = `${(config.tiles || []).length} tiles · ${devs} devices · ${(config.scenes || []).length} scenes — compare with the car's Info → Data row`;
+  }
+  refreshAddMenu();
+  const el = document.getElementById('tiles');
+  el.innerHTML = '';
+  config.tiles.forEach((tile, i) => {
+    const div = document.createElement('div');
+    div.className = 'tile';
+    div.innerHTML = `
+      <div class="tile-head">
+        <div class="grow">
+          <div class="name">${TYPE_LABEL[tile.type] || tile.type}</div>
+          <input type="text" value="${tile.label || ''}" placeholder="Label shown in the car"
+                 onchange="config.tiles[${i}].label = this.value">
+        </div>
+        <div class="arrows">
+          <button class="ghost" onclick="move(${i},-1)">↑</button>
+          <button class="ghost" onclick="move(${i},1)">↓</button>
+          <button class="ghost danger" onclick="removeTile(${i})">✕</button>
+        </div>
+      </div>
+      ${tile.type === 'energy' ? renderEnergyRoles(tile, i) : renderZonePicker(tile, i)}
+      ${tile.type === 'garage' || tile.type === 'gate' ? geofenceControls(tile, i) : ''}`;
+    el.appendChild(div);
+  });
+
+  const sc = document.getElementById('scenes');
+  sc.innerHTML = flows.length ? flows.map(f => `
+    <div class="item" style="display:flex;align-items:center;gap:10px">
+      <input type="checkbox" ${config.scenes.some(s => s.flowId === f.id) ? 'checked' : ''}
+             onchange="toggleScene('${f.id}', '${f.name.replace(/'/g, '')}', this.checked)">
+      <div style="flex:1"><div class="name">${f.name}</div></div>
+    </div>`).join('')
+    : '<p class="hint">No Flows found on this Homey.</p>';
+}
+
+/** Zone-grouped checkbox picker with per-room select-all. */
+function geofenceControls(tile, i) {
+  const noun = tile.type === 'gate' ? 'gate' : 'garage';
+  const openWord = tile.type === 'gate' ? 'unlocked / open' : 'open';
+  const actWord = tile.type === 'gate' ? 'Lock automatically' : 'Close automatically';
+  const notif = tile.geofence !== false;
+  return `
+    <div class="geo">
+      <div class="geo-row" onclick="config.tiles[${i}].geofence = ${notif ? 'false' : 'true'}; render()">
+        <span class="sw ${notif ? 'on' : ''}"></span>
+        <span class="geo-txt">Arrival &amp; departure notifications
+          <span class="geo-sub">Buttons in the car at the geofence crossings</span></span>
+      </div>
+      <div class="geo-q">On departure with the ${noun} still ${openWord}:</div>
+      <div class="geo-seg">
+        <button class="segb ${!tile.autoAct ? 'sel' : ''}" onclick="config.tiles[${i}].autoAct = false; render()">Notify me</button>
+        <button class="segb ${tile.autoAct ? 'sel' : ''}" onclick="config.tiles[${i}].autoAct = true; render()">${actWord}</button>
+      </div>
+    </div>`;
+}
+
+function renderZonePicker(tile, i) {
+  const candidates = devices.filter(TYPE_FILTER[tile.type] || (() => false));
+  if (!candidates.length) return '<div class="warnbox">No compatible devices — remove this tile or add devices to Homey.</div>';
+
+  const zones = {};
+  candidates.forEach(d => { (zones[d.zone] = zones[d.zone] || []).push(d); });
+
+  const ordered = Object.entries(zones).sort((a, b) =>
+    (zoneRank(a[0]) - zoneRank(b[0])) || a[0].localeCompare(b[0]));
+  return ordered.map(([zone, devs], zi) => {
+    const key = tile.id + '|' + zone;
+    const selCount = devs.filter(d => tile.deviceIds.includes(d.id)).length;
+    return `<div class="zone ${openZones.has(key) || selCount ? 'open' : ''}">
+      <div class="zone-head" onclick="toggleZone('${key}')">
+        <span>▸ ${zone} <span class="cnt">${selCount} of ${devs.length}</span></span>
+        <button class="linkish" onclick="event.stopPropagation(); selectAll(${i}, '${zone}', ${selCount < devs.length})">
+          ${selCount < devs.length ? 'All' : 'Clear'}
+        </button>
+      </div>
+      <div class="zone-body">
+        ${devs.map(d => {
+          const on = tile.deviceIds.includes(d.id);
+          return `<div class="drow" onclick="toggleDevice(${i}, '${d.id}', ${!on})">
+            <div class="dn">${titleCase(d.name)}${d.available ? '' :
+              '<div class="dsub">unreachable</div>'}</div>
+            <span class="sw ${on ? 'on' : ''}"></span>
+          </div>`;
+        }).join('')}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+/** Energy tile: one dropdown per role + hero picker. Roles without candidates are hidden. */
+function renderEnergyRoles(tile, i) {
+  tile.roles = tile.roles || {};
+  let html = Object.entries(ROLE_META).map(([role, meta]) => {
+    const candidates = devices.filter(ROLE_FILTER[role]);
+    if (!candidates.length && role !== 'consumption') return ''; // visibility follows data
+    const extra = role === 'consumption' ? '<option value="calculated">Calculate for me</option>' : '<option value="">— none —</option>';
+    return `<div class="role">
+      <div class="rname">${meta.label}</div>
+      <select onchange="config.tiles[${i}].roles['${role}'] = this.value">
+        ${extra}
+        ${candidates.map(d => `<option value="${d.id}" ${tile.roles[role] === d.id ? 'selected' : ''}>${d.name} (${d.zone})${d.currentValue ? ' — ' + d.currentValue : ''}</option>`).join('')}
+      </select>
+      <div class="rwhy">${meta.why}</div>
+    </div>`;
+  }).join('');
+
+  const hasSolar = devices.some(ROLE_FILTER.solar) && tile.roles.solar;
+  html += `<div class="role">
+    <div class="rname">Hero number</div>
+    <div class="heroRow">
+      <div class="heroOpt ${tile.hero !== 'solar' ? 'on' : ''}" onclick="setHero(${i}, 'consumption')">Consumption</div>
+      ${hasSolar ? `<div class="heroOpt ${tile.hero === 'solar' ? 'on' : ''}" onclick="setHero(${i}, 'solar')">Solar</div>` : ''}
+    </div>
+    <div class="rwhy">The big number on the car tile; assigned roles appear as columns below it.</div>
+  </div>`;
+  return html;
+}
+
+function toggleZone(key) {
+  openZones.has(key) ? openZones.delete(key) : openZones.add(key);
+  render();
+}
+function selectAll(i, zone, on) {
+  const tile = config.tiles[i];
+  const ids = devices.filter(d => d.zone === zone && TYPE_FILTER[tile.type](d)).map(d => d.id);
+  if (on) ids.forEach(id => { if (!tile.deviceIds.includes(id)) tile.deviceIds.push(id); });
+  else tile.deviceIds = tile.deviceIds.filter(id => !ids.includes(id));
+  render();
+}
+function toggleDevice(i, id, on) {
+  const ids = config.tiles[i].deviceIds;
+  if (on && !ids.includes(id)) ids.push(id);
+  if (!on) config.tiles[i].deviceIds = ids.filter(x => x !== id);
+  const zone = (devices.find(d => d.id === id) || {}).zone;
+  if (zone) openZones.add(config.tiles[i].id + '|' + zone);
+  render();
+}
+function toggleScene(flowId, label, on) {
+  if (on) config.scenes.push({ flowId, label });
+  else config.scenes = config.scenes.filter(s => s.flowId !== flowId);
+}
+function setHero(i, hero) { config.tiles[i].hero = hero; render(); }
+function move(i, dir) {
+  const j = i + dir;
+  if (j < 0 || j >= config.tiles.length) return;
+  [config.tiles[i], config.tiles[j]] = [config.tiles[j], config.tiles[i]];
+  render();
+}
+function removeTile(i) { config.tiles.splice(i, 1); render(); }
+
+function save() {
+  config.tiles = config.tiles.filter(t =>
+    t.type === 'energy'
+      ? Object.values(t.roles || {}).some(v => v && v !== '')
+      : (t.deviceIds || []).length > 0
+  );
+  HomeyRef.set('dashboard', config, err => {
+    render();
+    const t = document.getElementById('toast');
+    t.textContent = err ? 'Save failed: ' + err : 'Saved — your car will pick this up on next refresh';
+    t.style.display = 'block';
+    setTimeout(() => t.style.display = 'none', 2500);
+  });
+}
+</script>
+</body>
+</html>
