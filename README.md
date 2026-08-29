@@ -1,6 +1,6 @@
 # Car Dashboard for Homey Pro
 
-The Homey Pro companion of **[Car Dashboard for Android Automotive OS]([CAR_REPO_URL])** — the app that
+The Homey Pro companion of **[Car Dashboard for Android Automotive OS]([https://github.com/goncalb/car-dashboard-aaos])** — the app that
 decides what your car may see and do, and answers its questions.
 
 > Nothing works without the car side: install this app, then pair your car once with a code.
@@ -50,7 +50,7 @@ Homey except to your own paired cars through Athom's cloud.
 From the App Store: [HOMEY_APP_STORE_URL]. From source (Homey CLI):
 
 ```
-git clone [HOMEY_REPO_URL]
+git clone [https://github.com/goncalb/com.barradas.cardashboard]
 cd homey-app
 npm i -g homey && homey login
 homey app install
@@ -76,4 +76,4 @@ under the same license.
 
 ## Author
 
-Gonçalo Barradas — [CONTACT_PLACEHOLDER]
+Gonçalo Barradas
