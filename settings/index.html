@@ -33,7 +33,16 @@
       width: 100%; padding: 7px; border: 1px solid #ccc; border-radius: 8px; font-size: 13px; margin-top: 4px; background:#fff;
     }
     button { border: none; border-radius: 8px; padding: 8px 12px; font-size: 13px; cursor: pointer; background: #eee; }
-    button.primary { background: #7fb3d8; color: #0c1218; font-weight: 700; width: 100%; padding: 12px; margin-top: 14px; }
+    .savebar { position: sticky; bottom: 0; z-index: 50;
+      margin: 16px -14px 0; background: rgba(255,255,255,.97);
+      border-top: 1px solid #e3e7ec; padding: 10px 14px;
+      display: flex; align-items: center; gap: 12px;
+      box-shadow: 0 -4px 14px rgba(20,30,45,.06); }
+    .sbstatus { font-size: 12px; color: #2f7a4d; }
+    .sbstatus .linkish { font-size: 12px; font-weight: 700; }
+    .dirtyhint { font-size: 12px; color: #b07a20; white-space: nowrap; }
+    .dirtyhint::before { content: '●'; margin-right: 5px; }
+    button.primary { background: #7fb3d8; color: #0c1218; font-weight: 700; flex: 1; padding: 12px; margin: 0; border-radius: 10px; }
     button.danger { color: #b33; }
     button.linkish { background: none; color: #2a6c9b; padding: 2px 4px; font-size: 11px; }
     .arrows button { padding: 4px 8px; font-size: 12px; }
@@ -51,8 +60,6 @@
     .heroRow { display: flex; gap: 8px; margin-top: 6px; }
     .heroOpt { flex: 1; border: 1px solid #d5dae0; border-radius: 8px; padding: 7px 0; text-align: center; font-size: 12px; cursor: pointer; background: #fff; }
     .heroOpt.on { border-color: #7fb3d8; color: #2a6c9b; font-weight: 700; background: #eef6fc; }
-    .toast { position: fixed; bottom: 14px; left: 14px; right: 14px; background: #222; color: #fff;
-      border-radius: 10px; padding: 12px; font-size: 13px; text-align: center; display: none; z-index: 10; }
     .warnbox { background: #fdf6e8; border: 1px solid #eeddb5; border-radius: 10px; padding: 10px 12px;
       font-size: 11px; color: #8a6d2f; line-height: 1.4; margin-bottom: 8px; }
       .zrow { display:flex; align-items:center; gap:10px; padding:10px 10px;
@@ -141,8 +148,11 @@ button.ghost { background:none !important; border:1px solid #e2e6ea !important;
   <p class="hint">Cars connect with a one-time code — no API key ever leaves your Homey. Generate a code, enter it on the car's pairing screen within 5 minutes.</p>
   <div id="pairing"></div>
 
-  <button class="primary" onclick="save()">Save dashboard</button>
-  <div class="toast" id="toast"></div>
+  <div class="savebar">
+    <span id="sbstatus" class="sbstatus" style="display:none"></span>
+    <span id="dirtyhint" class="dirtyhint" style="display:none">Unsaved changes</span>
+    <button class="primary" onclick="save()">Save dashboard</button>
+  </div>
 
 <script>
 let HomeyRef, devices = [], flows = [];
@@ -158,6 +168,7 @@ function onHomeyReady(Homey) {
     new Promise(r => Homey.api('GET', '/flows', (e, v) => r(v || []))),
   ]).then(([saved, devs, fls]) => {
     if (saved) config = saved;
+    savedSnapshot = JSON.stringify(config);
     devices = devs.sort((a, b) => (a.zone + a.name).localeCompare(b.zone + b.name));
     flows = fls.sort((a, b) => a.name.localeCompare(b.name));
     render();
@@ -223,8 +234,13 @@ function renderPairing() {
           : `<span class="pill poff">Last seen ${humanAgo(c.lastSeen)}</span>`)
         : '<span class="pill poff">Not seen yet</span>';
       html += `<div class="carcard">
-        <div class="cartop">
-          <input class="car-name" data-tail="${c.tail}" value="${esc(c.name)}">
+        <div class="cartop" style="flex-wrap:wrap">
+          <label class="labelwrap" style="flex:1 1 100%;min-width:0">
+            <input class="car-name" data-tail="${c.tail}" data-orig="${esc(c.name)}" value="${esc(c.name)}"
+                   oninput="this.parentElement.parentElement.querySelector('.rename-btn').style.display = (this.value.trim() !== this.dataset.orig ? '' : 'none')">
+            <span class="pencil">✎</span>
+          </label>
+          <button class="ghost rename-btn" data-tail="${c.tail}" style="width:auto;padding:0 14px;display:none">Save name</button>
           ${pill}
         </div>
         <div class="cargrid">
@@ -240,8 +256,10 @@ function renderPairing() {
             <div class="cv">${when} · key …${c.tail} · as "${esc(c.deviceName)}"</div></div>
         </div>
         <div class="carbtns">
-          <button class="ghost rename-btn" data-tail="${c.tail}" style="width:auto;padding:0 16px">Rename</button>
-          <button class="ghost danger revoke-btn" data-tail="${c.tail}" style="width:auto;padding:0 16px">Revoke</button>
+          ${armedRevoke.tail === c.tail && Date.now() < armedRevoke.until
+            ? `<button class="ghost revoke-btn" data-tail="${c.tail}"
+                 style="width:auto;padding:0 16px;background:#b33;color:#fff">Tap again to disconnect</button>`
+            : `<button class="ghost danger revoke-btn" data-tail="${c.tail}" style="width:auto;padding:0 16px">Revoke</button>`}
         </div></div>`;
     });
     el.innerHTML = html;
@@ -275,6 +293,8 @@ function fallbackCopy(t, done) {
   document.body.removeChild(ta);
 }
 let zoneList = [];
+let pendingUndoOrder = null;
+let armedRevoke = { tail: null, until: 0 };
 function syncZoneList(cb) {
   HomeyRef.api('GET', '/zones', null, (err, v) => {
     if (!err && v) zoneList = v.zones || [];
@@ -344,11 +364,25 @@ document.addEventListener('pointerup', () => {
   drag.scrollDir = 0;
   drag.row.style.transform = '';
   drag.row.classList.remove('dragging');
+  pendingUndoOrder = zoneList.slice();
   zoneList = [...document.querySelectorAll('#zoneOrder .zrow')].map(r => r.dataset.zone);
-  HomeyRef.api('POST', '/zone-order', { zones: zoneList }, () => render());
+  HomeyRef.api('POST', '/zone-order', { zones: zoneList }, () => {
+    renderZoneOrder(); render();
+    showStatus('Room order saved \u2713 <button class="linkish sb-undo">Undo</button>', 8000);
+  });
   drag = null;
 });
 document.addEventListener('click', (ev) => {
+  const u = ev.target.closest('.sb-undo');
+  if (u && pendingUndoOrder) {
+    const prev = pendingUndoOrder; pendingUndoOrder = null;
+    HomeyRef.api('POST', '/zone-order', { zones: prev }, () => {
+      zoneList = prev;
+      renderZoneOrder(); render();
+      showStatus('Order restored \u2713', 2000);
+    });
+    return;
+  }
   const c = ev.target.closest('.copyable');
   if (c) { copyText(c.dataset.copy, c); return; }
   const r = ev.target.closest('.rename-btn');
@@ -356,11 +390,21 @@ document.addEventListener('click', (ev) => {
     const field = document.querySelector(`.car-name[data-tail="${r.dataset.tail}"]`);
     const name = field ? field.value.trim() : '';
     r.textContent = '…';
-    HomeyRef.api('POST', '/pairing', { renameTail: r.dataset.tail, name }, () => renderPairing());
+    HomeyRef.api('POST', '/pairing', { renameTail: r.dataset.tail, name }, () => { renderPairing(); showStatus('Car renamed \u2713', 2000); });
     return;
   }
   const d = ev.target.closest('.revoke-btn');
-  if (d) HomeyRef.api('POST', '/pairing', { revokeTail: d.dataset.tail }, () => renderPairing());
+  if (d) {
+    const armed = armedRevoke.tail === d.dataset.tail && Date.now() < armedRevoke.until;
+    if (!armed) {
+      armedRevoke = { tail: d.dataset.tail, until: Date.now() + 10000 };
+      renderPairing();
+      setTimeout(renderPairing, 10200);
+      return;
+    }
+    armedRevoke = { tail: null, until: 0 };
+    HomeyRef.api('POST', '/pairing', { revokeTail: d.dataset.tail }, () => renderPairing());
+  }
 });
 
 const TYPE_FILTER = {
@@ -411,6 +455,7 @@ function addTile() {
 }
 
 function render() {
+  setTimeout(updateDirty, 0);
   const sumEl = document.getElementById('configSummary');
   if (sumEl && config) {
     const devs = (config.tiles || []).reduce((n, t) => n + ((t.deviceIds || []).length), 0);
@@ -428,7 +473,8 @@ function render() {
           <div class="name">${TYPE_LABEL[tile.type] || tile.type}</div>
           <label class="labelwrap">
             <input type="text" maxlength="20" value="${tile.label || ''}" placeholder="Name shown in the car"
-                   onchange="config.tiles[${i}].label = this.value.trim()">
+                   oninput="config.tiles[${i}].label = this.value; updateDirty()"
+                   onchange="config.tiles[${i}].label = this.value.trim(); updateDirty()">
             <span class="pencil">✎</span>
           </label>
           <div class="labelhint">Name shown in the car — short names read best (max 20)</div>
@@ -443,6 +489,8 @@ function render() {
       ${tile.type === 'gate' ? `<div class="descbox">A Gate tile is one gate, one tap: pick a single gate,
         name it, and choose how it behaves when you drive away. More gates at home? Add one tile per
         gate — each keeps its own name, notifications and departure behaviour.</div>` : ''}
+      ${tile.type === 'garage' ? `<div class="descbox">One door, one tap: pick a single garage door and
+        choose how it behaves when you drive away. A second garage? Add another Garage tile.</div>` : ''}
       ${tile.type === 'garage' || tile.type === 'gate' ? geofenceControls(tile, i) : ''}`;
     el.appendChild(div);
   });
@@ -487,7 +535,7 @@ function renderZonePicker(tile, i) {
 
   const ordered = Object.entries(zones).sort((a, b) =>
     (zoneRank(a[0]) - zoneRank(b[0])) || a[0].localeCompare(b[0]));
-  const single = tile.type === 'gate';
+  const single = tile.type === 'gate' || tile.type === 'garage';
   const picker = ordered.map(([zone, devs], zi) => {
     const key = tile.id + '|' + zone;
     const selCount = devs.filter(d => tile.deviceIds.includes(d.id)).length;
@@ -516,12 +564,21 @@ function renderZonePicker(tile, i) {
   if (!single) return picker;
   const extra = tile.deviceIds.length > 1
     ? `<div class="warnbox">This tile has ${tile.deviceIds.length} devices selected from an earlier version —
-       the car uses only the first. Pick one; add another Gate tile for a second gate.</div>` : '';
-  return picker + extra + '<div class="hintline">One gate per tile — add another Gate tile for a second gate.</div>';
+       the car uses only the first. Pick one; add another tile for the others.</div>` : '';
+  const noun2 = tile.type === 'garage' ? 'garage' : 'gate';
+  return picker + extra + `<div class="hintline">One ${noun2} per tile — add another tile for a second one.</div>`;
 }
 
+function autoLabel(d) { return titleCase(d.name).slice(0, 20).trim(); }
+
 function pickDevice(i, id) {
-  config.tiles[i].deviceIds = [id];
+  const tile = config.tiles[i];
+  const prev = devices.find(x => x.id === (tile.deviceIds || [])[0]);
+  tile.deviceIds = [id];
+  const d = devices.find(x => x.id === id);
+  const untouched = !tile.label || tile.label === TYPE_LABEL[tile.type] ||
+    (prev && tile.label === autoLabel(prev));
+  if (d && untouched) tile.label = autoLabel(d);
   render(); save();
 }
 
@@ -534,7 +591,7 @@ function renderEnergyRoles(tile, i) {
     const extra = role === 'consumption' ? '<option value="calculated">Calculate for me</option>' : '<option value="">— none —</option>';
     return `<div class="role">
       <div class="rname">${meta.label}</div>
-      <select onchange="config.tiles[${i}].roles['${role}'] = this.value">
+      <select onchange="config.tiles[${i}].roles['${role}'] = this.value; updateDirty()">
         ${extra}
         ${candidates.map(d => `<option value="${d.id}" ${tile.roles[role] === d.id ? 'selected' : ''}>${d.name} (${d.zone})${d.currentValue ? ' — ' + d.currentValue : ''}</option>`).join('')}
       </select>
@@ -576,6 +633,7 @@ function toggleDevice(i, id, on) {
 function toggleScene(flowId, label, on) {
   if (on) config.scenes.push({ flowId, label });
   else config.scenes = config.scenes.filter(s => s.flowId !== flowId);
+  updateDirty();
 }
 function setHero(i, hero) { config.tiles[i].hero = hero; render(); }
 function move(i, dir) {
@@ -586,6 +644,21 @@ function move(i, dir) {
 }
 function removeTile(i) { config.tiles.splice(i, 1); render(); }
 
+let savedSnapshot = '';
+function showStatus(html, ms) {
+  const el = document.getElementById('sbstatus');
+  const dh = document.getElementById('dirtyhint');
+  el.innerHTML = html; el.style.display = ''; if (dh) dh.style.display = 'none';
+  clearTimeout(el._hide);
+  el._hide = setTimeout(() => { el.style.display = 'none'; updateDirty(); }, ms || 2500);
+  return el;
+}
+
+function updateDirty() {
+  const el = document.getElementById('dirtyhint');
+  if (el) el.style.display = (JSON.stringify(config) !== savedSnapshot) ? '' : 'none';
+}
+
 function save() {
   config.tiles = config.tiles.filter(t =>
     t.type === 'energy'
@@ -593,11 +666,9 @@ function save() {
       : (t.deviceIds || []).length > 0
   );
   HomeyRef.set('dashboard', config, err => {
+    savedSnapshot = JSON.stringify(config);
     render();
-    const t = document.getElementById('toast');
-    t.textContent = err ? 'Save failed: ' + err : 'Saved — your car will pick this up on next refresh';
-    t.style.display = 'block';
-    setTimeout(() => t.style.display = 'none', 2500);
+    showStatus(err ? 'Save failed: ' + err : 'Saved \u2713 — the car picks it up on next refresh', 3000);
   });
 }
 </script>

@@ -351,7 +351,7 @@ module.exports = {
       timestamp: new Date().toISOString(),
       realtime: homey.app.realtimeOk === true,
       home,
-      tiles: (config.tiles || []).map(t => Object.assign(buildTileState(t, deviceMap, report), { instant: !!t.instant, geofence: t.geofence !== false, auto: !!t.autoAct })),
+      tiles: (config.tiles || []).map(t => Object.assign(buildTileState(t, deviceMap, report), { geofence: t.geofence !== false, auto: !!t.autoAct })),
       scenes: config.scenes || [],
       meta,
     };
