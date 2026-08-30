@@ -1,6 +1,6 @@
 {
   "id": "com.barradas.cardashboard",
-  "version": "1.4.12",
+  "version": "1.4.13",
   "compatibility": ">=8.1.0",
   "sdk": 3,
   "platforms": [

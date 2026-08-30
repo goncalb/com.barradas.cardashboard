@@ -20,6 +20,14 @@
     .tile-head { display: flex; align-items: center; gap: 10px; }
     .tile-head .grow { flex: 1; min-width: 0; }
     .name { font-size: 14px; font-weight: 600; }
+    .labelwrap { position: relative; display: block; }
+    .labelwrap input { padding-right: 34px; background: #f7f9fb; }
+    .labelwrap input:focus { background: #fff; border-color: #4076c4; outline: none; }
+    .pencil { position: absolute; right: 10px; top: 50%; transform: translateY(-38%);
+      color: #8a94a0; font-size: 15px; pointer-events: none; }
+    .descbox { background:#f3f7fb; border-radius:10px; padding:10px 12px; font-size:12px;
+      color:#606a74; margin-top:10px; line-height:1.45; }
+    .labelhint { font-size: 10px; color: #a2abb5; margin-top: 3px; }
     .meta { font-size: 11px; color: #888; margin-top: 2px; }
     select, input[type=text] {
       width: 100%; padding: 7px; border: 1px solid #ccc; border-radius: 8px; font-size: 13px; margin-top: 4px; background:#fff;
@@ -71,6 +79,9 @@
     .sw.on::after { left:18px; }
     .cnt { background:#e8f0fb; color:#2f6fce; border-radius:99px; padding:1px 9px;
       font-size:11px; font-weight:600; }
+    .rd { width:20px; height:20px; border-radius:50%; border:2px solid #c8cdd4; flex:none; }
+    .rd.on { border-color:#4076c4; box-shadow: inset 0 0 0 4px #fff; background:#4076c4; }
+    .hintline { font-size:11px; color:#98a2ad; margin-top:8px; }
     .geo { margin-top:12px; padding-top:10px; border-top:1px solid #eef1f4; }
     .geo-row { display:flex; gap:10px; align-items:center; cursor:pointer; }
     .geo-txt { font-size:13px; color:#3a424c; text-transform:none; letter-spacing:0; display:flex; flex-direction:column; }
@@ -415,8 +426,12 @@ function render() {
       <div class="tile-head">
         <div class="grow">
           <div class="name">${TYPE_LABEL[tile.type] || tile.type}</div>
-          <input type="text" value="${tile.label || ''}" placeholder="Label shown in the car"
-                 onchange="config.tiles[${i}].label = this.value">
+          <label class="labelwrap">
+            <input type="text" maxlength="20" value="${tile.label || ''}" placeholder="Name shown in the car"
+                   onchange="config.tiles[${i}].label = this.value.trim()">
+            <span class="pencil">✎</span>
+          </label>
+          <div class="labelhint">Name shown in the car — short names read best (max 20)</div>
         </div>
         <div class="arrows">
           <button class="ghost" onclick="move(${i},-1)">↑</button>
@@ -425,6 +440,9 @@ function render() {
         </div>
       </div>
       ${tile.type === 'energy' ? renderEnergyRoles(tile, i) : renderZonePicker(tile, i)}
+      ${tile.type === 'gate' ? `<div class="descbox">A Gate tile is one gate, one tap: pick a single gate,
+        name it, and choose how it behaves when you drive away. More gates at home? Add one tile per
+        gate — each keeps its own name, notifications and departure behaviour.</div>` : ''}
       ${tile.type === 'garage' || tile.type === 'gate' ? geofenceControls(tile, i) : ''}`;
     el.appendChild(div);
   });
@@ -469,28 +487,42 @@ function renderZonePicker(tile, i) {
 
   const ordered = Object.entries(zones).sort((a, b) =>
     (zoneRank(a[0]) - zoneRank(b[0])) || a[0].localeCompare(b[0]));
-  return ordered.map(([zone, devs], zi) => {
+  const single = tile.type === 'gate';
+  const picker = ordered.map(([zone, devs], zi) => {
     const key = tile.id + '|' + zone;
     const selCount = devs.filter(d => tile.deviceIds.includes(d.id)).length;
     return `<div class="zone ${openZones.has(key) || selCount ? 'open' : ''}">
       <div class="zone-head" onclick="toggleZone('${key}')">
         <span>▸ ${zone} <span class="cnt">${selCount} of ${devs.length}</span></span>
-        <button class="linkish" onclick="event.stopPropagation(); selectAll(${i}, '${zone}', ${selCount < devs.length})">
+        ${single ? '' : `<button class="linkish" onclick="event.stopPropagation(); selectAll(${i}, '${zone}', ${selCount < devs.length})">
           ${selCount < devs.length ? 'All' : 'Clear'}
-        </button>
+        </button>`}
       </div>
       <div class="zone-body">
         ${devs.map(d => {
           const on = tile.deviceIds.includes(d.id);
-          return `<div class="drow" onclick="toggleDevice(${i}, '${d.id}', ${!on})">
+          const click = single
+            ? `pickDevice(${i}, '${d.id}')`
+            : `toggleDevice(${i}, '${d.id}', ${!on})`;
+          return `<div class="drow" onclick="${click}">
             <div class="dn">${titleCase(d.name)}${d.available ? '' :
               '<div class="dsub">unreachable</div>'}</div>
-            <span class="sw ${on ? 'on' : ''}"></span>
+            <span class="${single ? 'rd' : 'sw'} ${on ? 'on' : ''}"></span>
           </div>`;
         }).join('')}
       </div>
     </div>`;
   }).join('');
+  if (!single) return picker;
+  const extra = tile.deviceIds.length > 1
+    ? `<div class="warnbox">This tile has ${tile.deviceIds.length} devices selected from an earlier version —
+       the car uses only the first. Pick one; add another Gate tile for a second gate.</div>` : '';
+  return picker + extra + '<div class="hintline">One gate per tile — add another Gate tile for a second gate.</div>';
+}
+
+function pickDevice(i, id) {
+  config.tiles[i].deviceIds = [id];
+  render(); save();
 }
 
 /** Energy tile: one dropdown per role + hero picker. Roles without candidates are hidden. */
