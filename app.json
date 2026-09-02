@@ -1,6 +1,6 @@
 {
   "id": "com.barradas.cardashboard",
-  "version": "1.4.15",
+  "version": "1.4.17",
   "compatibility": ">=8.1.0",
   "sdk": 3,
   "platforms": [
@@ -85,6 +85,11 @@
     "large": "/assets/images/large.png",
     "xlarge": "/assets/images/xlarge.png"
   },
-  "support": "https://community.homey.app/t/REPLACE-TOPIC-ID",
-  "homeyCommunityTopicId": 0
+  "support": "https://community.homey.app/t/app-pro-car-dashboard-for-android-automotive-volvo-polestar-renault/158804",
+  "homeyCommunityTopicId": 158804,
+  "source": "https://github.com/goncalb/com.barradas.cardashboard",
+  "bugs": {
+    "url": "https://github.com/goncalb/com.barradas.cardashboard/issues"
+  },
+  "homepage": "https://github.com/goncalb/car-dashboard-aaos"
 }

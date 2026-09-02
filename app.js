@@ -95,4 +95,43 @@ class CarDashboardApp extends Homey.App {
 
 }
 
+
+CarDashboardApp.prototype.getHomeyName = async function () {
+  try {
+    const name = await this.homey.cloud.getHomeyName?.();
+    if (name) return name;
+  } catch (e) {}
+  try {
+    const sys = await this.homey.api.get?.('/manager/system/');
+    if (sys && sys.hostname) return sys.hostname;
+  } catch (e) {}
+  return '';
+};
+
+CarDashboardApp.prototype.getOwnerName = async function () {
+  try {
+    const me = await this.homey.api.get?.('/manager/users/user/me');
+    if (me && me.name) return me.name;
+  } catch (e) {}
+  return '';
+};
+
+CarDashboardApp.prototype.getTimeline = async function () {
+  try {
+    const res = await this.homey.api.get?.('/manager/notifications/notification');
+    const list = Array.isArray(res) ? res : Object.values(res || {});
+    return list
+      .sort((a, b) => new Date(b.dateCreated) - new Date(a.dateCreated))
+      .slice(0, 30)
+      .map(n => {
+        let t = String(n.excerpt || '')
+          .replace(/[*_]/g, '')
+          .replace(/\s+/g, ' ')
+          .trim();
+        if (t.length > 140) t = t.slice(0, 139).trimEnd() + '…';
+        return { text: t, at: n.dateCreated };
+      });
+  } catch (e) { return []; }
+};
+
 module.exports = CarDashboardApp;

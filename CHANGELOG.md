@@ -4,6 +4,23 @@ Companion app for Car Dashboard on Android Automotive OS. The car app has
 its own [CHANGELOG](https://github.com/goncalb/car-dashboard-aaos/blob/main/CHANGELOG.md);
 versions are numbered in step where they ship together.
 
+## 1.4.17 (2026-09-02) — Settings, reorganised
+
+- Settings redesigned as four tabs: Tiles, Scenes, Rooms, Cars. Tile
+  cards collapse to a summary line and expand one at a time; new tiles
+  open expanded and scroll into view.
+- The unsaved-changes indicator now says where the changes are
+  ("here and in Scenes"); the save bar appears only where saving applies.
+- New users land on the Cars tab with a getting-started guide whose
+  step links switch tabs.
+- Scenes sort alphabetically — in settings and, served sorted, on every
+  car immediately.
+- Groundwork for the next car release, shipped dark: Homey name and
+  owner in metadata, and a /timeline endpoint (newest 30 entries,
+  flattened to single lines).
+- Webview lesson of the release: short tab pages surrendered drag
+  gestures to the native sheet; every tab is now minimally scrollable.
+
 ## 1.4.16 (2026-09-01) — Live, and pointing home
 
 - Published to the Homey App Store after certification. The store page

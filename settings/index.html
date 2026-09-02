@@ -123,10 +123,28 @@ button.ghost { background:none !important; border:1px solid #e2e6ea !important;
       color:#98a2ac; font-weight:600; }
     .cv { font-size:13px; color:#23292f; margin-top:2px; word-break:break-word; }
     .carbtns { display:flex; gap:8px; }
+    .tabpage { min-height: calc(100vh + 2px); }
+    .tabbar { position: sticky; top: 0; z-index: 40; display: flex;
+      background: #fff; border-bottom: 1px solid #e3e7ec; margin: -14px -14px 14px; }
+    .tab { flex: 1; background: none; border-radius: 0; padding: 12px 0;
+      font-size: 14px; color: #6e747c; border-bottom: 3px solid transparent; }
+    .tab.on { color: #4076c4; font-weight: 700; border-bottom-color: #4076c4; }
+    .tile-head .name { cursor: pointer; }
+    .tile-collapsed-sum { font-size: 12px; color: #98a2ad; margin-top: 2px;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .chev { border: none; background: none; font-size: 16px; color: #7a828c; padding: 4px 8px; }
   </style>
 </head>
 <body>
 
+  <div class="tabbar">
+    <button class="tab on" data-tab="tiles" onclick="showTab('tiles')">Tiles</button>
+    <button class="tab" data-tab="scenes" onclick="showTab('scenes')">Scenes</button>
+    <button class="tab" data-tab="rooms" onclick="showTab('rooms')">Rooms</button>
+    <button class="tab" data-tab="cars" onclick="showTab('cars')">Cars</button>
+  </div>
+
+  <div class="tabpage" id="page-tiles">
   <h2>Dashboard tiles</h2>
   <p class="hint">These appear on your car's screen, in this order. The car can only see and control what you add here. Tile types without compatible devices aren't offered.</p>
 <p class="meta" id="configSummary"></p>
@@ -137,18 +155,36 @@ button.ghost { background:none !important; border:1px solid #e2e6ea !important;
     <button onclick="addTile()">+ Add tile</button>
   </div>
 
+  </div>
+
+  <div class="tabpage" id="page-scenes" style="display:none">
   <h2>Scenes for the car</h2>
   <p class="hint">Whitelisted Homey Flows the car can trigger with one tap. Only enable Flows that are safe to run from the road.</p>
   <div id="scenes"></div>
 
+  </div>
+
+  <div class="tabpage" id="page-rooms" style="display:none">
 <h2>Room order (car app)</h2>
 <p class="meta">Drag to arrange — the car's sections follow this order.</p>
 <div id="zoneOrder"></div>
+  </div>
+
+  <div class="tabpage" id="page-cars" style="display:none">
 <h2>Paired cars</h2>
+  <div class="descbox" style="margin:0 0 10px">
+    <b>Getting started:</b>
+    1. Generate a code below and enter it on the car's pairing screen (Car Dashboard app on Google Play).&nbsp;
+    2. Choose what the car sees in <a href="#" onclick="showTab('tiles');return false">Tiles</a>
+    and <a href="#" onclick="showTab('scenes');return false">Scenes</a>.&nbsp;
+    3. Arrange <a href="#" onclick="showTab('rooms');return false">Rooms</a> in the order the car lists them.
+  </div>
   <p class="hint">Cars connect with a one-time code — no API key ever leaves your Homey. Generate a code, enter it on the car's pairing screen within 5 minutes.</p>
   <div id="pairing"></div>
 
-  <div class="savebar">
+  </div>
+
+  <div class="savebar" id="savebar">
     <span id="sbstatus" class="sbstatus" style="display:none"></span>
     <span id="dirtyhint" class="dirtyhint" style="display:none">Unsaved changes</span>
     <button class="primary" onclick="save()">Save dashboard</button>
@@ -158,6 +194,42 @@ button.ghost { background:none !important; border:1px solid #e2e6ea !important;
 let HomeyRef, devices = [], flows = [];
 let config = { tiles: [], scenes: [] };
 const openZones = new Set();
+let activeSettingsTab = 'tiles';
+let defaultTabDecided = false;
+let expandedTile = null;   // tile.id of the one expanded card (webview law: state in variables)
+
+function showTab(t) {
+  activeSettingsTab = t;
+  document.querySelectorAll('.tabpage').forEach(p =>
+    p.style.display = (p.id === 'page-' + t) ? '' : 'none');
+  document.querySelectorAll('.tab').forEach(b =>
+    b.classList.toggle('on', b.dataset.tab === t));
+  document.getElementById('savebar').style.display =
+    (t === 'tiles' || t === 'scenes') ? '' : 'none';
+  updateDirty();
+}
+
+function tileSummary(tile) {
+  const names = (tile.deviceIds || []).map(id =>
+    (devices.find(d => d.id === id) || {}).name).filter(Boolean);
+  if (tile.type === 'energy') {
+    const roles = Object.entries(tile.roles || {}).filter(([,v]) => v).map(([k]) => k);
+    return roles.length ? roles.join(' · ') : 'No roles assigned yet';
+  }
+  let base = names.length === 0 ? 'No device selected yet'
+    : names.length === 1 ? titleCase(names[0])
+    : names.length + ' devices';
+  if (tile.type === 'garage' || tile.type === 'gate') {
+    base += tile.geofence === false ? ' · no notifications'
+      : (tile.autoAct ? ' · closes automatically' : ' · notifies on departure');
+  }
+  return base;
+}
+
+function toggleTileCard(id) {
+  expandedTile = (expandedTile === id) ? null : id;
+  render();
+}
 
 let pairingPoll = null;
 function onHomeyReady(Homey) {
@@ -205,6 +277,10 @@ function renderPairing() {
   HomeyRef.api('GET', '/pairing', (e, v) => {
     const el = document.getElementById('pairing');
     if (e || !v) { el.innerHTML = '<p class="hint">Pairing unavailable</p>'; return; }
+    if (!defaultTabDecided) {
+      defaultTabDecided = true;
+      if (!(v.cars || []).length) showTab('cars');
+    }
     let html = '';
     if (v.code) {
       const mins = Math.max(0, Math.round((v.code.expiresAt - Date.now()) / 60000));
@@ -451,7 +527,10 @@ function addTile() {
   if (type === 'energy') { tile.roles = { consumption: 'calculated' }; tile.hero = 'consumption'; }
   else tile.deviceIds = [];
   config.tiles.push(tile);
+  expandedTile = tile.id;
   render();
+  const cards = document.querySelectorAll('#tiles .tile');
+  if (cards.length) cards[cards.length - 1].scrollIntoView({ behavior: 'smooth', block: 'center' });
 }
 
 function render() {
@@ -467,36 +546,43 @@ function render() {
   config.tiles.forEach((tile, i) => {
     const div = document.createElement('div');
     div.className = 'tile';
-    div.innerHTML = `
+    const isOpen = expandedTile === tile.id;
+      div.innerHTML = `
       <div class="tile-head">
         <div class="grow">
-          <div class="name">${TYPE_LABEL[tile.type] || tile.type}</div>
+          <div class="name" onclick="toggleTileCard('${tile.id}')">${TYPE_LABEL[tile.type] || tile.type}
+            ${isOpen ? '' : ` — <span style="font-weight:400">${esc(tile.label || '')}</span>`}</div>
+          ${isOpen ? `
           <label class="labelwrap">
             <input type="text" maxlength="20" value="${tile.label || ''}" placeholder="Name shown in the car"
                    oninput="config.tiles[${i}].label = this.value; updateDirty()"
                    onchange="config.tiles[${i}].label = this.value.trim(); updateDirty()">
             <span class="pencil">✎</span>
           </label>
-          <div class="labelhint">Name shown in the car — short names read best (max 20)</div>
+          <div class="labelhint">Name shown in the car — short names read best (max 20)</div>`
+          : `<div class="tile-collapsed-sum">${tileSummary(tile)}</div>`}
         </div>
+        <button class="chev" onclick="toggleTileCard('${tile.id}')">${isOpen ? '⌃' : '⌄'}</button>
         <div class="arrows">
           <button class="ghost" onclick="move(${i},-1)">↑</button>
           <button class="ghost" onclick="move(${i},1)">↓</button>
           <button class="ghost danger" onclick="removeTile(${i})">✕</button>
         </div>
       </div>
+      ${!isOpen ? '' : `
       ${tile.type === 'energy' ? renderEnergyRoles(tile, i) : renderZonePicker(tile, i)}
       ${tile.type === 'gate' ? `<div class="descbox">A Gate tile is one gate, one tap: pick a single gate,
         name it, and choose how it behaves when you drive away. More gates at home? Add one tile per
         gate — each keeps its own name, notifications and departure behaviour.</div>` : ''}
       ${tile.type === 'garage' ? `<div class="descbox">One door, one tap: pick a single garage door and
         choose how it behaves when you drive away. A second garage? Add another Garage tile.</div>` : ''}
-      ${tile.type === 'garage' || tile.type === 'gate' ? geofenceControls(tile, i) : ''}`;
+      ${tile.type === 'garage' || tile.type === 'gate' ? geofenceControls(tile, i) : ''}`}`;
     el.appendChild(div);
   });
 
   const sc = document.getElementById('scenes');
-  sc.innerHTML = flows.length ? flows.map(f => `
+  const sortedFlows = flows.slice().sort((a, b) => a.name.localeCompare(b.name));
+  sc.innerHTML = sortedFlows.length ? sortedFlows.map(f => `
     <div class="item" style="display:flex;align-items:center;gap:10px">
       <input type="checkbox" ${config.scenes.some(s => s.flowId === f.id) ? 'checked' : ''}
              onchange="toggleScene('${f.id}', '${f.name.replace(/'/g, '')}', this.checked)">
@@ -518,11 +604,12 @@ function geofenceControls(tile, i) {
         <span class="geo-txt">Arrival &amp; departure notifications
           <span class="geo-sub">Buttons in the car at the geofence crossings</span></span>
       </div>
+      ${!notif ? '' : `
       <div class="geo-q">On departure with the ${noun} still ${openWord}:</div>
       <div class="geo-seg">
         <button class="segb ${!tile.autoAct ? 'sel' : ''}" onclick="config.tiles[${i}].autoAct = false; render()">Notify me</button>
         <button class="segb ${tile.autoAct ? 'sel' : ''}" onclick="config.tiles[${i}].autoAct = true; render()">${actWord}</button>
-      </div>
+      </div>`}
     </div>`;
 }
 
@@ -656,7 +743,23 @@ function showStatus(html, ms) {
 
 function updateDirty() {
   const el = document.getElementById('dirtyhint');
-  if (el) el.style.display = (JSON.stringify(config) !== savedSnapshot) ? '' : 'none';
+  if (!el) return;
+  let savedTiles = '', savedScenes = '';
+  try {
+    const sv = JSON.parse(savedSnapshot || '{}');
+    savedTiles = JSON.stringify(sv.tiles || []);
+    savedScenes = JSON.stringify(sv.scenes || []);
+  } catch (e) {}
+  const tilesDirty = JSON.stringify(config.tiles || []) !== savedTiles;
+  const scenesDirty = JSON.stringify(config.scenes || []) !== savedScenes;
+  if (!tilesDirty && !scenesDirty) { el.style.display = 'none'; return; }
+  const here = activeSettingsTab === 'scenes' ? scenesDirty : tilesDirty;
+  const other = activeSettingsTab === 'scenes' ? tilesDirty : scenesDirty;
+  const otherName = activeSettingsTab === 'scenes' ? 'Tiles' : 'Scenes';
+  el.textContent = here
+    ? (other ? 'Unsaved changes — here and in ' + otherName : 'Unsaved changes')
+    : 'Unsaved changes in ' + otherName;
+  el.style.display = '';
 }
 
 function save() {

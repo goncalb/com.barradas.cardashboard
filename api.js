@@ -337,6 +337,8 @@ module.exports = {
     const meta = {
       appVersion: homey.app.homey.manifest.version,
       homeyVersion: homey.app.homey.version,
+      homeyName: await homey.app.getHomeyName(),
+      ownerName: await homey.app.getOwnerName(),
     };
     requireCarToken(homey, query && query.carToken);
     const config = homey.app.getConfig();
@@ -352,7 +354,7 @@ module.exports = {
       realtime: homey.app.realtimeOk === true,
       home,
       tiles: (config.tiles || []).map(t => Object.assign(buildTileState(t, deviceMap, report), { geofence: t.geofence !== false, auto: !!t.autoAct })),
-      scenes: config.scenes || [],
+      scenes: (config.scenes || []).slice().sort((a, b) => String(a.label).localeCompare(String(b.label))),
       meta,
     };
   },
@@ -518,6 +520,16 @@ module.exports = {
     const known = saved.filter(n => names.includes(n));
     const fresh = names.filter(n => !known.includes(n)).sort((a, b) => a.localeCompare(b));
     return { zones: [...known, ...fresh] };
+  },
+
+  async getTimeline({ homey, query }) {
+    requireCarToken(homey, query && query.carToken);
+    let items = [];
+    try {
+      const nf = await homey.app.getTimeline();
+      items = nf;
+    } catch (e) { items = []; }
+    return { items };
   },
 
   async postZoneOrder({ homey, body }) {
