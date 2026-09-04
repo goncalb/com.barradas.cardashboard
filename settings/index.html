@@ -173,6 +173,14 @@ button.ghost { background:none !important; border:1px solid #e2e6ea !important;
   <div class="tabpage" id="page-cars" style="display:none">
 <h2>Paired cars</h2>
   <div class="descbox" style="margin:0 0 10px">
+    <b>Install the car app (Google Play, closed testing):</b>
+    1. Join the testers group: <a href="https://groups.google.com/g/car-dashboard-testers" target="_blank">groups.google.com/g/car-dashboard-testers</a>&nbsp;
+    2. Accept the test: <a href="https://play.google.com/apps/testing/com.barradas.cardashboard" target="_blank">play.google.com/apps/testing/…</a>&nbsp;
+    3. Install <b>Car Dashboard</b> from the Play Store in your car:
+    <a href="https://play.google.com/store/apps/details?id=com.barradas.cardashboard" target="_blank">play.google.com/store/apps/details?id=com.barradas.cardashboard</a>
+    Use the Google account that's logged into the car. During the test period, please keep the app installed.
+  </div>
+  <div class="descbox" style="margin:0 0 10px">
     <b>Getting started:</b>
     1. Generate a code below and enter it on the car's pairing screen (Car Dashboard app on Google Play).&nbsp;
     2. Choose what the car sees in <a href="#" onclick="showTab('tiles');return false">Tiles</a>
@@ -181,6 +189,16 @@ button.ghost { background:none !important; border:1px solid #e2e6ea !important;
   </div>
   <p class="hint">Cars connect with a one-time code — no API key ever leaves your Homey. Generate a code, enter it on the car's pairing screen within 5 minutes.</p>
   <div id="pairing"></div>
+
+  <h2>Timeline in the car (optional)</h2>
+  <p class="hint">Homey doesn't let apps read your Timeline directly. To show it in the car,
+    create an API key with only the <b>Notifications</b> scope at my.homey.app &rarr; Settings &rarr;
+    API Keys, and paste it here. Leave empty to keep the Timeline private.</p>
+  <div class="item" style="display:flex;gap:10px;align-items:center">
+    <input type="password" id="tlKey" placeholder="API key (kept on your Homey)" style="flex:1;margin:0">
+    <button class="ghost" style="width:auto;padding:0 14px" onclick="saveTlKey()">Save</button>
+    <span id="tlKeyStatus" class="meta" style="display:none;white-space:nowrap"></span>
+  </div>
 
   </div>
 
@@ -233,6 +251,7 @@ function toggleTileCard(id) {
 
 let pairingPoll = null;
 function onHomeyReady(Homey) {
+  setTimeout(loadTlKey, 0);
   HomeyRef = Homey;
   Promise.all([
     new Promise(r => Homey.get('dashboard', (e, v) => r(v))),
@@ -345,6 +364,18 @@ function cancelCode() {
   HomeyRef.api('POST', '/pairing', { cancelCode: true }, () => renderPairing());
 }
 
+function saveTlKey() {
+  const v = document.getElementById('tlKey').value.trim();
+  HomeyRef.set('timelineKey', v, (e) => {
+    const el = document.getElementById('tlKeyStatus');
+    el.textContent = e ? 'Save failed' : (v ? 'Saved \u2713' : 'Removed');
+    el.style.display = '';
+    setTimeout(() => { el.style.display = 'none'; }, 2500);
+  });
+}
+function loadTlKey() {
+  HomeyRef.get('timelineKey', (e, v) => { if (!e && v) document.getElementById('tlKey').value = v; });
+}
 function genCode() { HomeyRef.api('POST', '/pairing', { generate: true }, () => renderPairing()); }
 function esc(t) {
   return String(t == null ? '' : t)
@@ -484,9 +515,10 @@ document.addEventListener('click', (ev) => {
 });
 
 const TYPE_FILTER = {
-  garage:      d => d.capabilities.includes('garagedoor_closed'),
-  gate:        d => d.capabilities.includes('garagedoor_closed') || d.capabilities.includes('locked'),
-  lock:        d => d.capabilities.includes('locked'),
+  garage:      d => d.class === 'garagedoor' && d.capabilities.includes('garagedoor_closed'),
+  gate:        d => (d.class === 'garagedoor' && d.capabilities.includes('garagedoor_closed'))
+                 || (d.class === 'lock' && d.capabilities.includes('locked')),
+  lock:        d => d.class === 'lock' && d.capabilities.includes('locked'),
   lights:      d => d.class === 'light' && d.capabilities.includes('onoff'),
   temperature: d => d.capabilities.includes('measure_temperature'),
   blinds:      d => d.capabilities.some(c => c.startsWith('windowcoverings_')),

@@ -98,40 +98,55 @@ class CarDashboardApp extends Homey.App {
 
 CarDashboardApp.prototype.getHomeyName = async function () {
   try {
-    const name = await this.homey.cloud.getHomeyName?.();
-    if (name) return name;
-  } catch (e) {}
-  try {
-    const sys = await this.homey.api.get?.('/manager/system/');
-    if (sys && sys.hostname) return sys.hostname;
+    const api = await HomeyAPI.createAppAPI({ homey: this.homey });
+    const name = await api.system.getSystemName();
+    if (name) return String(name);
   } catch (e) {}
   return '';
 };
 
 CarDashboardApp.prototype.getOwnerName = async function () {
   try {
-    const me = await this.homey.api.get?.('/manager/users/user/me');
-    if (me && me.name) return me.name;
+    const api = await HomeyAPI.createAppAPI({ homey: this.homey });
+    const me = await api.users.getUserMe();
+    if (me && (me.name || me.athomId)) return String(me.name || '');
   } catch (e) {}
   return '';
 };
 
 CarDashboardApp.prototype.getTimeline = async function () {
+  const key = this.homey.settings.get('timelineKey');
+  if (!key) return [];
   try {
-    const res = await this.homey.api.get?.('/manager/notifications/notification');
-    const list = Array.isArray(res) ? res : Object.values(res || {});
-    return list
+    const addr = await this.homey.cloud.getLocalAddress();
+    const list = await new Promise((resolve, reject) => {
+      require('http').get({
+        host: addr.split(':')[0],
+        port: parseInt(addr.split(':')[1] || '80', 10),
+        path: '/api/manager/notifications/notification',
+        headers: { Authorization: 'Bearer ' + key },
+        timeout: 5000,
+      }, res => {
+        let b = '';
+        res.on('data', c => b += c);
+        res.on('end', () => {
+          try { resolve(JSON.parse(b)); } catch (e) { reject(e); }
+        });
+      }).on('error', reject).on('timeout', function () { this.destroy(new Error('timeout')); });
+    });
+    const arr = Array.isArray(list) ? list : Object.values(list || {});
+    return arr
       .sort((a, b) => new Date(b.dateCreated) - new Date(a.dateCreated))
       .slice(0, 30)
       .map(n => {
-        let t = String(n.excerpt || '')
-          .replace(/[*_]/g, '')
-          .replace(/\s+/g, ' ')
-          .trim();
+        let t = String(n.excerpt || '').replace(/[*_]/g, '').replace(/\s+/g, ' ').trim();
         if (t.length > 140) t = t.slice(0, 139).trimEnd() + '…';
         return { text: t, at: n.dateCreated };
       });
-  } catch (e) { return []; }
+  } catch (e) {
+    this.error('timeline failed:', e && (e.message || String(e)));
+    return [];
+  }
 };
 
 module.exports = CarDashboardApp;

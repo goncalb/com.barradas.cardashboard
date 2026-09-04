@@ -4,20 +4,35 @@ Companion app for Car Dashboard on Android Automotive OS. The car app has
 its own [CHANGELOG](https://github.com/goncalb/car-dashboard-aaos/blob/main/CHANGELOG.md);
 versions are numbered in step where they ship together.
 
+## 1.4.19 (2026-09-03) — Store polish and a smoother funnel
+
+- Store description refined per App Store review feedback; the Cars
+  tab's install guide links the Google Play test pages directly.
+
+## 1.4.18 (2026-09-02) — The car learns your Homey's name
+
+- Serves the Homey's name and owner to the car's new Info tab, and —
+  optionally — the Timeline: Homey doesn't let apps read it (Missing
+  Scopes), so the user can create an API key with only the Notifications
+  scope and paste it on the Cars tab. Stored on the Homey, used
+  read-only, fully optional.
+- Gate, Garage and Lock pickers filter by device class, not capability —
+  a car with a lock capability no longer qualifies as a gate. Found by
+  Simone Di Maio, whose Volvo appeared in his gate picker.
+- Cars tab gains step-by-step instructions for installing the car app
+  and joining the Google Play closed test.
+
 ## 1.4.17 (2026-09-02) — Settings, reorganised
 
 - Settings redesigned as four tabs: Tiles, Scenes, Rooms, Cars. Tile
   cards collapse to a summary line and expand one at a time; new tiles
   open expanded and scroll into view.
-- The unsaved-changes indicator now says where the changes are
-  ("here and in Scenes"); the save bar appears only where saving applies.
+- The unsaved-changes indicator says where the changes are ("here and
+  in Scenes"); the save bar appears only where saving applies.
 - New users land on the Cars tab with a getting-started guide whose
   step links switch tabs.
 - Scenes sort alphabetically — in settings and, served sorted, on every
   car immediately.
-- Groundwork for the next car release, shipped dark: Homey name and
-  owner in metadata, and a /timeline endpoint (newest 30 entries,
-  flattened to single lines).
 - Webview lesson of the release: short tab pages surrendered drag
   gestures to the native sheet; every tab is now minimally scrollable.
 

@@ -13,8 +13,9 @@ geofence features.
 
 The car side lives in its own repository:
 [car-dashboard-aaos](https://github.com/goncalb/car-dashboard-aaos)
-(Google Play, internal testing). Nothing works without it — install this
-app, then pair your car once with a code.
+(Google Play, closed testing — the join links are on this app's settings
+page, Cars tab). Nothing works without it — install this app, then pair
+your car once with a code.
 
 **Least privilege by design.** The car never holds your Homey account.
 Pairing issues a per-car token that can only read and act on the devices
@@ -39,6 +40,10 @@ See [CHANGELOG.md](CHANGELOG.md) for the full version history.
   EV charger roles, plus Homey Energy's daily totals
 - Carries each barrier tile's **geofence preferences** (notify, or close
   automatically on departure) so the car can act without asking twice
+- Optionally serves your **Timeline** to the car (newest 30 events,
+  flattened to single lines) — enabled by a user-created API key with
+  only the Notifications scope, since Homey doesn't let apps read the
+  Timeline on their own
 - Stores room order, honours Homey virtual classes, keeps blind state
   honest (position beats the last motor command)
 
@@ -62,14 +67,18 @@ picked device's name until you type your own.
 
 ## Settings page
 
-| Area | In one line |
+Four tabs since 1.4.17:
+
+| Tab | In one line |
 |---|---|
-| Tiles | Add, order, name, pick devices; single-select pickers for Garage and Gate with a short description of the one-door-one-tap contract |
-| Lights | Tick lights (virtual-class aware); drag rooms into the order the car shows — saves instantly with Undo |
-| Scenes | Tick Flows; they become buttons in the car |
-| Energy | One dropdown per role; consumption is house-only when a charger role is set |
-| Cars | Pairing code (5-minute TTL, single use), fleet cards with last seen, rename, two-step revoke |
-| Save | Sticky save bar with an "unsaved changes" indicator; explicit save for the dashboard, instant save with a receipt for room order and fleet actions |
+| Tiles | Add, order and name tiles; cards collapse to a summary and expand one at a time; single-select pickers for Garage and Gate; departure behaviour per barrier |
+| Scenes | Tick Flows (alphabetical); they become buttons in the car |
+| Rooms | Drag rooms into the order the car shows — saves instantly with Undo |
+| Cars | Install guide for the car app, pairing code (5-minute TTL, single use), fleet cards with rename and two-step revoke, and the optional Timeline API key |
+
+The save bar appears on Tiles and Scenes only, and its unsaved-changes
+indicator says where the changes are ("here and in Scenes"). New users
+with no paired car land on the Cars tab.
 
 The settings page runs in Homey's webview, which has rules of its own
 (no `confirm()`, no `position: fixed`, DOM is rebuilt by the fleet poll);
@@ -85,6 +94,7 @@ history if you touch it.
 | `POST /action` | `{tileId, action, carToken}` — token in the **body** |
 | `GET /devices` | Settings UI only; effective class is `virtualClass || class` |
 | `GET /zones` · `POST /zone-order` | Room order |
+| `GET /timeline` | Newest 30 Timeline entries (only with the user's API key) |
 | `GET/POST /pairing` | Codes, fleet, rename, revoke |
 
 The app requests `homey:manager:api` to read device state and energy

@@ -1,6 +1,6 @@
 {
   "id": "com.barradas.cardashboard",
-  "version": "1.4.17",
+  "version": "1.4.19",
   "compatibility": ">=8.1.0",
   "sdk": 3,
   "platforms": [
@@ -10,7 +10,7 @@
     "en": "Car Dashboard"
   },
   "description": {
-    "en": "Configure a simple, safe dashboard for your car's display (Android Automotive)."
+    "en": "Configure a simple, safe dashboard for your Android Automotive display"
   },
   "category": [
     "tools"
@@ -77,6 +77,11 @@
     "postCarMeta": {
       "method": "POST",
       "path": "/car-meta",
+      "public": true
+    },
+    "getTimeline": {
+      "method": "GET",
+      "path": "/timeline",
       "public": true
     }
   },
